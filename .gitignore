@@ -1,0 +1,41 @@
+# Ignore bundler config
+/.bundle/
+
+# Ignore the default SQLite database
+/db/*.sqlite3
+
+# Ignore the default PostgreSQL database
+/db/*.postgresql
+
+# Ignore the default MySQL database
+/db/*.mysql
+
+# Ignore local configuration files
+/config/*.yml
+/config/*.rb
+
+# Ignore generated files
+/bin/
+/doc/
+/log/
+/tmp/
+
+# Ignore OS-specific files
+*.swp
+.DS_Store
+Thumbs.db
+
+# Ignore dependency files
+Gemfile.lock
+
+# Ignore IDE-specific files
+.idea/
+.vscode/
+
+# Ignore coverage reports
+/coverage/
+
+# Ignore compiled code
+/**/*.gem
+/**/*.o
+/**/*.so
