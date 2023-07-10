@@ -25,11 +25,11 @@ python3 -m pip install blest
 
 ## Usage
 
-Use the `create_request_handler` function to create a request handler suitable for use in an existing Python application. Use the `create_http_server` function to create a standalone HTTP server for your request handler. Use the `create_http_client` function to create a BLEST HTTP client.
+Use the `create_request_handler` function to create a request handler suitable for use in an existing Python application. Use the `create_http_server` function to create a standalone HTTP server for your request handler.
+
+<!-- Use the `create_http_client` function to create a BLEST HTTP client. -->
 
 ### create_request_handler
-
-The following example uses Flask, but you can find examples with other frameworks [here](examples).
 
 ```ruby
 require 'socket'
@@ -124,6 +124,47 @@ loop do
 
   end
 end
+```
+
+### create_http_server
+
+```ruby
+require 'socket'
+require 'json'
+require './blest.rb'
+
+# Create some middleware (optional)
+auth_middleware = ->(params, context) {
+  if params[:name].present?
+    context[:user] = {
+      name: params[:name]
+    }
+    nil
+  else
+    raise RuntimeError, "Unauthorized"
+  end
+}
+
+# Create a route controller
+greet_controller = ->(params, context) {
+  {
+    greeting: "Hi, #{context[:user][:name]}!"
+  }
+}
+
+# Create a router
+router = {
+  greet: [auth_middleware, greet_controller]
+}
+
+# Create a request handler
+handler = create_request_handler(router)
+
+# Create the server
+server = create_http_server(handler, { port: 8080 })
+
+# Run the server
+server.()
 ```
 
 ## License
