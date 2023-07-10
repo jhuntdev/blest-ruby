@@ -15,13 +15,13 @@ For a front-end implementation in React, please visit https://github.com/jhuntde
 - Single Endpoint - Reduce complexity and improve data privacy
 - Fully Encrypted - Improve data privacy
 
-<!-- ## Installation
+## Installation
 
-Install BLEST Python from PyPI.
+Install BLEST Ruby from Rubygems.
 
 ```bash
-python3 -m pip install blest
-``` -->
+gem install blest
+```
 
 ## Usage
 
@@ -32,11 +32,9 @@ Use the `create_request_handler` function to create a request handler suitable f
 ### create_request_handler
 
 ```ruby
-require 'socket'
+require 'webrick'
 require 'json'
-require './blest.rb'
-
-server = TCPServer.new('localhost', 8080)
+require 'blest'
 
 # Create some middleware (optional)
 auth_middleware = ->(params, context) {
@@ -65,73 +63,66 @@ router = {
 # Create a request handler
 handler = create_request_handler(router)
 
-puts "Server listening on port 8080"
+class HttpRequestHandler < WEBrick::HTTPServlet::AbstractServlet
+  def do_OPTIONS(request, response)
+    response.status = 200
+    response['Access-Control-Allow-Origin'] = '*'
+    response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+    response['Access-Control-Allow-Headers'] = 'Content-Type'
+  end
 
-loop do
+  def do_POST(request, response)
+    response['Content-Type'] = 'application/json'
+    response['Access-Control-Allow-Origin'] = '*'
 
-  client = server.accept
-
-  request = client.gets
-  if request.nil?
-    client.close
-  else
-
-    method, path, _ = request.split(' ')
-
-    if method != 'POST' 
-      client.puts "HTTP/1.1 405 Method Not Allowed"
-      client.puts "\r\n"
-    elsif path != '/'
-      client.puts "HTTP/1.1 404 Not Found"
-      client.puts "\r\n"
-    else
-      content_length = 0
-      while line = client.gets
-        break if line == "\r\n"
-        content_length = line.split(': ')[1].to_i if line.start_with?('Content-Length')
-      end
-
-      body = client.read(content_length)
-      data = JSON.parse(body)
-
+    # Parse JSON body
+    begin
+      payload = JSON.parse(request.body)
+      
+      # Define the request context
       context = {
         headers: request.headers
       }
 
-      # Use the request handler]
-      result, error = handler.(data, context)
+      # Use the request handler
+      result, error = handler.(payload, context)
 
+      # Do something with the result or error
       if error
-          response = error.to_json
-          client.puts "HTTP/1.1 500 Internal Server Error"
-          client.puts "Content-Type: application/json"
-          client.puts "Content-Length: #{response.bytesize}"
-          client.puts "\r\n"
-          client.puts response
+        response_body = error.to_json
+        response.status = 500
+        response.body = response_body
       elsif result
-          response = result.to_json
-          client.puts "HTTP/1.1 200 OK"
-          client.puts "Content-Type: application/json"
-          client.puts "Content-Length: #{response.bytesize}"
-          client.puts "\r\n"
-          client.puts response
+        response_body = result.to_json
+        response.status = 200
+        response.body = response_body
       else
-          client.puts "HTTP/1.1 204 No Content"
+        response.status = 204
       end
+
+    rescue JSON::ParserError
+      response.status = 400
+      response.body = { message: 'Invalid JSON' }.to_json
     end
-
-    client.close
-
   end
 end
+
+# Create WEBrick server
+server = WEBrick::HTTPServer.new(Port: 8000)
+
+# Mount custom request handler
+server.mount('/', HttpRequestHandler)
+
+trap('INT') { server.shutdown }
+
+# Start the server
+server.start
 ```
 
 ### create_http_server
 
 ```ruby
-require 'socket'
-require 'json'
-require './blest.rb'
+require 'blest'
 
 # Create some middleware (optional)
 auth_middleware = ->(params, context) {
