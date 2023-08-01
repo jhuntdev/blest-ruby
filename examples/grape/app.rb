@@ -1,0 +1,66 @@
+require 'grape'
+require 'json'
+require 'blest'
+
+router = Router.new()
+
+router.route('hello') do |params, context|
+  {
+    'hello': 'world',
+    'bonjour': 'le monde',
+    'hola': 'mundo',
+    'hallo': 'welt'
+  }
+end
+
+router.route('greet') do |params, context|
+  {
+    'greeting': 'Hi, ' + params.get('name') + '!'
+  }
+end
+
+router.route('fail') do |params, context|
+  raise StandardError('Intentional failure')
+end
+
+class MyAPI < Grape::API
+  format :json
+
+  use Rack::Cors do
+    allow do
+      origins '*'
+      resource '*', headers: :any, methods: [:post, :options]
+    end
+  end
+
+  options '/' do
+    status 204
+  end
+
+  post '/' do
+    headers = env.select { |k, _| k.start_with?('HTTP_') }
+                  .collect { |k, v| [k.sub(/^HTTP_/, '').split('_').map(&:capitalize).join('-'), v] }
+                  .to_h
+    
+    begin
+      json_body = JSON.parse(request.body.read)
+    rescue JSON::ParserError
+      error!('Invalid JSON', 400)
+    end
+
+    result, error = router.handle(json_body, { 'headers' => headers })
+
+    response_headers = {
+      'Content-Type' => 'application/json',
+      'Access-Control-Allow-Origin' => '*' # Allow all origins in the response headers
+    }
+
+    if error
+      error_response(message: error.message, status: error.status || 500)
+    else
+      status 200
+      headers response_headers
+      body result.to_json
+    end
+  end
+end

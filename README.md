@@ -2,7 +2,7 @@
 
 The Ruby reference implementation of BLEST (Batch-able, Lightweight, Encrypted State Transfer), an improved communication protocol for web APIs which leverages JSON, supports request batching and selective returns, and provides a modern alternative to REST.
 
-To learn more about BLEST, please refer to the white paper: https://jhunt.dev/BLEST%20White%20Paper.pdf
+To learn more about BLEST, please visit the website: https://blest.jhunt.dev
 
 For a front-end implementation in React, please visit https://github.com/jhuntdev/blest-react
 
@@ -25,138 +25,100 @@ gem install blest
 
 ## Usage
 
-Use the `create_request_handler` function to create a request handler suitable for use in an existing Python application. Use the `create_http_server` function to create a standalone HTTP server for your request handler.
-
-<!-- Use the `create_http_client` function to create a BLEST HTTP client. -->
-
-### create_request_handler
+This core class of this library has an interface somewhat similar to Sinatra. It also provides a `Router` class with a `handle` method for use in an existing Ruby API and an `HttpClient` class with a `request` method for making BLEST HTTP requests.
 
 ```ruby
-require 'webrick'
-require 'json'
 require 'blest'
 
+app = Blest.new(timeout: 1000, port: 8080, host: 'localhost', cors: 'http://localhost:3000')
+
 # Create some middleware (optional)
-auth_middleware = ->(params, context) {
-  if params[:name].present?
-    context[:user] = {
-      name: params[:name]
+app.before do |params, context|
+  if params['name'].present?
+    context['user'] = {
+      name: params['name']
     }
     nil
   else
     raise RuntimeError, "Unauthorized"
-  end
-}
-
-# Create a route controller
-greet_controller = ->(params, context) {
-  {
-    greeting: "Hi, #{context[:user][:name]}!"
-  }
-}
-
-# Create a router
-router = {
-  greet: [auth_middleware, greet_controller]
-}
-
-# Create a request handler
-handler = create_request_handler(router)
-
-class HttpRequestHandler < WEBrick::HTTPServlet::AbstractServlet
-  def do_OPTIONS(request, response)
-    response.status = 200
-    response['Access-Control-Allow-Origin'] = '*'
-    response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
-    response['Access-Control-Allow-Headers'] = 'Content-Type'
-  end
-
-  def do_POST(request, response)
-    response['Content-Type'] = 'application/json'
-    response['Access-Control-Allow-Origin'] = '*'
-
-    # Parse JSON body
-    begin
-      payload = JSON.parse(request.body)
-      
-      # Define the request context
-      context = {
-        headers: request.headers
-      }
-
-      # Use the request handler
-      result, error = handler.(payload, context)
-
-      # Do something with the result or error
-      if error
-        response_body = error.to_json
-        response.status = 500
-        response.body = response_body
-      elsif result
-        response_body = result.to_json
-        response.status = 200
-        response.body = response_body
-      else
-        response.status = 204
-      end
-
-    rescue JSON::ParserError
-      response.status = 400
-      response.body = { message: 'Invalid JSON' }.to_json
-    end
   end
 end
 
-# Create WEBrick server
-server = WEBrick::HTTPServer.new(Port: 8000)
-
-# Mount custom request handler
-server.mount('/', HttpRequestHandler)
-
-trap('INT') { server.shutdown }
+# Create a route controller
+app.route('greet') do |params, context|
+  {
+    greeting: "Hi, #{context['user']['name']}!"
+  }
+end
 
 # Start the server
-server.start
+app.listen
 ```
 
-### create_http_server
+### Router
+
+The following example uses Sinatra.
 
 ```ruby
+require 'sinatra'
+require 'json'
 require 'blest'
 
+# Instantiate the Router
+router = Router.new(timeout: 1000)
+
 # Create some middleware (optional)
-auth_middleware = ->(params, context) {
-  if params[:name].present?
-    context[:user] = {
-      name: params[:name]
+router.before do |params, context|
+  if params['name'].present?
+    context['user'] = {
+      name: params['name']
     }
     nil
   else
     raise RuntimeError, "Unauthorized"
   end
-}
+end
 
 # Create a route controller
-greet_controller = ->(params, context) {
+router.route('greet') do |params, context|
   {
-    greeting: "Hi, #{context[:user][:name]}!"
+    greeting: "Hi, #{context['user']['name']}!"
   }
-}
+end
 
-# Create a router
-router = {
-  greet: [auth_middleware, greet_controller]
-}
-
-# Create a request handler
-handler = create_request_handler(router)
-
-# Create the server
-server = create_http_server(handler, { port: 8080 })
-
-# Run the server
-server.()
+# Handle BLEST requests
+post '/' do
+  json_body = JSON.parse(request.body.read)
+  headers = request.env.select { |k, _| k.start_with?('HTTP_') }
+  result, error = router.handle.call(json_body, { 'headers' => headers })
+  content_type :json
+  if error
+    raise Sinatra::Error.new(error.status || 500, error)
+  else
+    result
+  end
+end
 ```
+
+### HttpClient
+
+```ruby
+require 'blest'
+
+# Create a client
+client = HttpClient.new('http://localhost:8080', max_batch_size = 25, buffer_delay = 10, headers = {
+  'Authorization': 'Bearer token'
+})
+
+# Send a request
+begin
+  result = client.request('greet', { 'name': 'Steve' }, ['greeting']).value
+  # Do something with the result
+rescue => error
+  # Do something in case of error
+end
+```
+
 
 ## License
 
