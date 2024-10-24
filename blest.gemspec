@@ -2,11 +2,11 @@
 
 Gem::Specification.new do |spec|
     spec.name          = "blest"
-    spec.version       = "0.1.0"
+    spec.version       = "1.0.0"
     spec.authors       = ["JHunt"]
-    spec.email         = ["blest@jhunt.dev"]
+    spec.email         = ["hello@jhunt.dev"]
     spec.summary       = %q{The Ruby reference implementation of BLEST}
-    spec.description   = %q{The Ruby reference implementation of BLEST (Batch-able, Lightweight, Encrypted State Transfer), an improved communication protocol for web APIs which leverages JSON, supports request batching and selective returns, and provides a modern alternative to REST.}
+    spec.description   = %q{The Ruby reference implementation of BLEST (Batch-able, Lightweight, Encrypted State Transfer), an improved communication protocol for web APIs which leverages JSON, supports request batching by default, and provides a modern alternative to REST.}
     spec.homepage      = "https://blest.jhunt.dev"
     spec.license       = "MIT"
   

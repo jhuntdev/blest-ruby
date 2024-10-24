@@ -36,12 +36,12 @@ RSpec.describe Router do
   error6 = nil
 
   before(:all) do
-    router.route('basicRoute') do |parameters, context|
-      { 'route'=> 'basicRoute', 'parameters' => parameters, 'context' => context }
+    router.route('basicRoute') do |body, context|
+      { 'route'=> 'basicRoute', 'body' => body, 'context' => context }
     end
 
-    router.before do |parameters, context|
-      context['test'] = { 'value' => parameters['testValue'] }
+    router.before do |body, context|
+      context['test'] = { 'value' => body['testValue'] }
       nil
     end
 
@@ -52,20 +52,20 @@ RSpec.describe Router do
       nil
     end
 
-    router2.route('mergedRoute') do |parameters, context|
-      { 'route' => 'mergedRoute', 'parameters' => parameters, 'context' => context }
+    router2.route('mergedRoute') do |body, context|
+      { 'route' => 'mergedRoute', 'body' => body, 'context' => context }
     end
 
-    router2.route('timeoutRoute') do |parameters|
+    router2.route('timeoutRoute') do |body|
       sleep(0.2)
-      { 'testValue' => parameters['testValue'] }
+      { 'testValue' => body['testValue'] }
     end
 
     router.merge(router2)
 
-    router3.route('errorRoute') do |parameters|
-      error = BlestError.new(parameters['testValue'])
-      error.code = "ERROR_#{(parameters['testValue'].to_f * 10).round}"
+    router3.route('errorRoute') do |body|
+      error = BlestError.new(body['testValue'])
+      error.code = "ERROR_#{(body['testValue'].to_f * 10).round}"
       raise error
     end
 
@@ -140,9 +140,9 @@ RSpec.describe Router do
     expect(result5[0][1]).to eq('timeoutRoute')
   end
 
-  it 'should accept parameters' do
-    expect(result1[0][2]['parameters']['testValue']).to eq(testValue1)
-    expect(result2[0][2]['parameters']['testValue']).to eq(testValue2)
+  it 'should accept body' do
+    expect(result1[0][2]['body']['testValue']).to eq(testValue1)
+    expect(result2[0][2]['body']['testValue']).to eq(testValue2)
   end
 
   it 'should respect context' do

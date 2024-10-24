@@ -75,14 +75,9 @@ class Router
       @routes[route]['description'] = config['description']
     end
 
-    if config.key?('parameters')
-      raise ArgumentError, 'Parameters should be a dict' if !config['parameters'].nil? && !config['parameters'].is_a?(Hash)
-      @routes[route]['parameters'] = config['parameters']
-    end
-
-    if config.key?('result')
-      raise ArgumentError, 'Result should be a dict' if !config['result'].nil? && !config['result'].is_a?(Hash)
-      @routes[route]['result'] = config['result']
+    if config.key?('schema')
+      raise ArgumentError, 'Schema should be a dict' if !config['schema'].nil? && !config['schema'].is_a?(Hash)
+      @routes[route]['schema'] = config['schema']
     end
 
     if config.key?('visible')
@@ -182,24 +177,24 @@ class HttpClient
   attr_reader :queue, :futures
   attr_accessor :url, :max_batch_size, :buffer_delay, :headers
 
-  def initialize(url, max_batch_size = 25, buffer_delay = 10, headers = {})
+  def initialize(url, max_batch_size = 25, buffer_delay = 10, http_headers = {})
     @url = url
     @max_batch_size = max_batch_size
     @buffer_delay = buffer_delay
-    @headers = headers
+    @http_headers = http_headers
     @queue = Queue.new
     @futures = {}
     @lock = Mutex.new
   end
 
-  def request(route, parameters=nil, selector=nil)
+  def request(route, body=nil, headers=nil)
     uuid = SecureRandom.uuid
     future = Concurrent::Promises.resolvable_future
     @lock.synchronize do
       @futures[uuid] = future
     end
 
-    @queue.push({ uuid: uuid, data: [uuid, route, parameters, selector] })
+    @queue.push({ uuid: uuid, data: [uuid, route, body, headers] })
     process_timeout()
     future
   end
@@ -232,7 +227,7 @@ class HttpClient
     http = Net::HTTP.new(uri.host, uri.port)
     http.use_ssl = true if uri.scheme == 'https'
 
-    request = Net::HTTP::Post.new(path, @headers.merge({ 'Accept' => 'application/json', 'Content-Type' => 'application/json' }))
+    request = Net::HTTP::Post.new(path, @http_headers.merge({ 'Accept' => 'application/json', 'Content-Type' => 'application/json' }))
     request.body = JSON.generate(batch.map { |item| item[:data] })
 
     http.request(request)
@@ -653,16 +648,26 @@ end
 
 
 
-def validate_route(route)
+def validate_route(route, system)
   route_regex = /^[a-zA-Z][a-zA-Z0-9_\-\/]*[a-zA-Z0-9]$/
+  system_route_regex = /^_[a-zA-Z][a-zA-Z0-9_\-\/]*[a-zA-Z0-9]$/
   if route.nil? || route.empty?
     return 'Route is required'
-  elsif !(route =~ route_regex)
+  elsif system && !(route =~ system_route_regex)
+    route_length = route.length
+    if route_length < 3
+      return 'System route should be at least three characters long'
+    elsif route[0] != '_'
+      return 'System route should start with an underscore'
+    elsif !(route[-1] =~ /^[a-zA-Z0-9]/)
+      return 'System route should end with a letter or a number'
+    else
+      return 'System route should contain only letters, numbers, dashes, underscores, and forward slashes'
+    end
+  elsif !system && !(route =~ route_regex)
     route_length = route.length
     if route_length < 2
       return 'Route should be at least two characters long'
-    elsif route[-1] == '/'
-      return 'Route should not end in a forward slash'
     elsif !(route[0] =~ /^[a-zA-Z]/)
       return 'Route should start with a letter'
     elsif !(route[-1] =~ /^[a-zA-Z0-9]/)
@@ -714,12 +719,12 @@ def handle_request(routes, requests, context = {})
       return handle_error(400, 'Request items should have a route')
     end
 
-    if parameters && !parameters.is_a?(Hash)
-      return handle_error(400, 'Request item parameters should be an object')
+    if body && !body.is_a?(Hash)
+      return handle_error(400, 'Request item body should be an object')
     end
 
-    if selector && !selector.is_a?(Array)
-      return handle_error(400, 'Request item selector should be an array')
+    if headers && !headers.is_a?(Hash)
+      return handle_error(400, 'Request item headers should be an object')
     end
 
     if unique_ids.include?(id)
@@ -741,21 +746,20 @@ def handle_request(routes, requests, context = {})
     request_object = {
       id: id,
       route: route,
-      parameters: parameters || {},
-      selector: selector
+      body: body || {},
+      headers: headers
     }
 
-    my_context = {
-      'requestId' => id,
-      'routeName' => route,
-      'selector' => selector,
-      'requestTime' => DateTime.now.to_time.to_i
-    }
+    request_context = {}
     if context.is_a?(Hash)
-      my_context = my_context.merge(context)
+      request_context = request_context.merge(context)
     end
+    request_context.id = id
+    request_context.route = route
+    request_context.headers = headers
+    request_context.time = DateTime.now.to_time.to_i
 
-    promises << Thread.new { route_reducer(route_handler, request_object, my_context, timeout) }
+    promises << Thread.new { route_reducer(route_handler, request_object, request_context, timeout) }
   end
 
   results = promises.map(&:value)
@@ -820,7 +824,7 @@ def route_reducer(handler, request, context, timeout = nil)
         if h.respond_to?(:call)
           temp_result = Concurrent::Promises.future do
             begin
-              h.call(request[:parameters], safe_context)
+              h.call(request[:body], safe_context)
             rescue => e
               error = e
             end
@@ -845,7 +849,7 @@ def route_reducer(handler, request, context, timeout = nil)
       if handler.respond_to?(:call)
         my_result = Concurrent::Promises.future do
           begin
-            handler.call(request[:parameters], safe_context)
+            handler.call(request[:body], safe_context)
           rescue => e
             error = e
           end
@@ -880,9 +884,9 @@ def route_reducer(handler, request, context, timeout = nil)
       return [request[:id], request[:route], nil, { 'message' => 'Internal Server Error', 'status' => 500 }]
     end
 
-    if request[:selector]
-      result = filter_object(result, request[:selector])
-    end
+    # if request[:selector]
+    #   result = filter_object(result, request[:selector])
+    # end
 
     [request[:id], request[:route], result, nil]
   rescue => error

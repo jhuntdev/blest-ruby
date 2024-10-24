@@ -1,6 +1,6 @@
 # BLEST Ruby
 
-The Ruby reference implementation of BLEST (Batch-able, Lightweight, Encrypted State Transfer), an improved communication protocol for web APIs which leverages JSON, supports request batching and selective returns, and provides a modern alternative to REST.
+The Ruby reference implementation of BLEST (Batch-able, Lightweight, Encrypted State Transfer), an improved communication protocol for web APIs which leverages JSON, supports request batching by default, and provides a modern alternative to REST.
 
 To learn more about BLEST, please visit the website: https://blest.jhunt.dev
 
@@ -10,8 +10,7 @@ For a front-end implementation in React, please visit https://github.com/jhuntde
 
 - Built on JSON - Reduce parsing time and overhead
 - Request Batching - Save bandwidth and reduce load times
-- Compact Payloads - Save more bandwidth
-- Selective Returns - Save even more bandwidth
+- Compact Payloads - Save even more bandwidth
 - Single Endpoint - Reduce complexity and improve data privacy
 - Fully Encrypted - Improve data privacy
 
@@ -33,10 +32,10 @@ require 'blest'
 app = Blest.new(timeout: 1000, port: 8080, host: 'localhost', cors: 'http://localhost:3000')
 
 # Create some middleware (optional)
-app.before do |params, context|
-  if params['name'].present?
+app.before do |body, context|
+  if context.dig('headers', 'auth') == 'myToken'?
     context['user'] = {
-      name: params['name']
+      # user info for example
     }
     nil
   else
@@ -45,9 +44,9 @@ app.before do |params, context|
 end
 
 # Create a route controller
-app.route('greet') do |params, context|
+app.route('greet') do |body, context|
   {
-    greeting: "Hi, #{context['user']['name']}!"
+    greeting: "Hi, #{body['name']}!"
   }
 end
 
@@ -68,10 +67,10 @@ require 'blest'
 router = Router.new(timeout: 1000)
 
 # Create some middleware (optional)
-router.before do |params, context|
-  if params['name'].present?
+router.before do |body, context|
+  if context.dig('headers', 'auth') == 'myToken'?
     context['user'] = {
-      name: params['name']
+      # user info for example
     }
     nil
   else
@@ -80,9 +79,9 @@ router.before do |params, context|
 end
 
 # Create a route controller
-router.route('greet') do |params, context|
+router.route('greet') do |body, context|
   {
-    greeting: "Hi, #{context['user']['name']}!"
+    greeting: "Hi, #{body['name']}!"
   }
 end
 
@@ -106,7 +105,7 @@ end
 require 'blest'
 
 # Create a client
-client = HttpClient.new('http://localhost:8080', max_batch_size = 25, buffer_delay = 10, headers = {
+client = HttpClient.new('http://localhost:8080', max_batch_size = 25, buffer_delay = 10, http_headers = {
   'Authorization': 'Bearer token'
 })
 
