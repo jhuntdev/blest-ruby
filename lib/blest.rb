@@ -1,6 +1,5 @@
 require 'socket'
 require 'json'
-require 'date'
 require 'concurrent'
 require 'securerandom'
 require 'net/http'
@@ -188,7 +187,7 @@ class HttpClient
   end
 
   def request(route, body=nil, headers=nil)
-    uuid = SecureRandom.uuid
+    uuid = SecureRandom.uuid()
     future = Concurrent::Promises.resolvable_future
     @lock.synchronize do
       @futures[uuid] = future
@@ -697,6 +696,7 @@ def handle_request(routes, requests, context = {})
     return handle_error(400, 'Request should be an array')
   end
 
+  batch_id = SecureRandom.uuid()
   unique_ids = []
   promises = []
 
@@ -754,10 +754,10 @@ def handle_request(routes, requests, context = {})
     if context.is_a?(Hash)
       request_context = request_context.merge(context)
     end
-    request_context.id = id
+    request_context.batch_id = batch_id
+    request_context.request_id = id
     request_context.route = route
     request_context.headers = headers
-    request_context.time = DateTime.now.to_time.to_i
 
     promises << Thread.new { route_reducer(route_handler, request_object, request_context, timeout) }
   end
