@@ -49,7 +49,7 @@ class Router
   end
 
   def route(route, &handler)
-    route_error = validate_route(route)
+    route_error = validate_route(route, false)
     raise ArgumentError, route_error if route_error
     raise ArgumentError, 'Route already exists' if @routes.key?(route)
     raise ArgumentError, 'Handler should be a function' unless handler.respond_to?(:call)
@@ -57,8 +57,7 @@ class Router
     @routes[route] = {
       handler: [*@middleware, handler, *@afterware],
       description: nil,
-      parameters: nil,
-      result: nil,
+      schema: nil,
       visible: @introspection,
       validate: false,
       timeout: @timeout
@@ -119,7 +118,7 @@ class Router
   def namespace(prefix, router)
     raise ArgumentError, 'Router is required' unless router.is_a?(Router)
 
-    prefix_error = validate_route(prefix)
+    prefix_error = validate_route(prefix, false)
     raise ArgumentError, prefix_error if prefix_error
 
     new_routes = router.routes.keys
@@ -604,7 +603,7 @@ def create_request_handler(routes)
   my_routes = {}
 
   routes.each do |key, route|
-    route_error = validate_route(key)
+    route_error = validate_route(key, false)
     raise ArgumentError, "#{route_error}: #{key}" if route_error
 
     if route.is_a?(Array)
@@ -708,8 +707,8 @@ def handle_request(routes, requests, context = {})
 
     id = request[0] || nil
     route = request[1] || nil
-    parameters = request[2] || nil
-    selector = request[3] || nil
+    body = request[2] || nil
+    headers = request[3] || nil
 
     if id.nil? || !id.is_a?(String)
       return handle_error(400, 'Request item should have an ID')
@@ -754,10 +753,10 @@ def handle_request(routes, requests, context = {})
     if context.is_a?(Hash)
       request_context = request_context.merge(context)
     end
-    request_context.batch_id = batch_id
-    request_context.request_id = id
-    request_context.route = route
-    request_context.headers = headers
+    request_context["batch_id"] = batch_id
+    request_context["request_id"] = id
+    request_context["route"] = route
+    request_context["headers"] = headers
 
     promises << Thread.new { route_reducer(route_handler, request_object, request_context, timeout) }
   end

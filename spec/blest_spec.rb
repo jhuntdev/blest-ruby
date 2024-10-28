@@ -42,6 +42,7 @@ RSpec.describe Router do
 
     router.before do |body, context|
       context['test'] = { 'value' => body['testValue'] }
+      context['requestTime'] = Time.now
       nil
     end
 
