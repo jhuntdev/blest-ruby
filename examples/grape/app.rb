@@ -4,7 +4,7 @@ require 'blest'
 
 router = Router.new()
 
-router.route('hello') do |params, context|
+router.route('hello') do |body, context|
   {
     'hello': 'world',
     'bonjour': 'le monde',
@@ -13,13 +13,13 @@ router.route('hello') do |params, context|
   }
 end
 
-router.route('greet') do |params, context|
+router.route('greet') do |body, context|
   {
-    'greeting': 'Hi, ' + params.get('name') + '!'
+    'greeting': 'Hi, ' + body.get('name') + '!'
   }
 end
 
-router.route('fail') do |params, context|
+router.route('fail') do |body, context|
   raise StandardError('Intentional failure')
 end
 
