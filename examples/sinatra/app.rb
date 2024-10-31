@@ -39,7 +39,7 @@ post '/' do
                 .collect { |k, v| [k.sub(/^HTTP_/, '').split('_').map(&:capitalize).join('-'), v] }
                 .to_h
   
-  result, error = router.handle(json_body, { 'headers' => headers })
+  result, error = router.handle(json_body, { 'httpHeaders' => httpHeaders })
 
   content_type :json
   if error

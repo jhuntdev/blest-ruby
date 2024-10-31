@@ -24,36 +24,6 @@ gem install blest
 
 ## Usage
 
-The `Blest` class of this library has an interface similar to Sinatra. It also provides a `Router` class with a `handle` method for use in an existing Ruby API and an `HttpClient` class with a `request` method for making BLEST HTTP requests.
-
-```ruby
-require 'blest'
-
-app = Blest.new(timeout: 1000, port: 8080, host: 'localhost', cors: 'http://localhost:3000')
-
-# Create some middleware (optional)
-app.before do |body, context|
-  if context.dig('headers', 'auth') == 'myToken'?
-    context['user'] = {
-      # user info for example
-    }
-    nil
-  else
-    raise RuntimeError, "Unauthorized"
-  end
-end
-
-# Create a route controller
-app.route('greet') do |body, context|
-  {
-    greeting: "Hi, #{body['name']}!"
-  }
-end
-
-# Start the server
-app.listen
-```
-
 ### Router
 
 The following example uses Sinatra.
@@ -111,7 +81,7 @@ client = HttpClient.new('http://localhost:8080', max_batch_size = 25, buffer_del
 
 # Send a request
 begin
-  result = client.request('greet', { 'name': 'Steve' }, ['greeting']).value
+  result = client.request('greet', { 'name': 'Steve' }, { 'auth': 'myToken' }).value
   # Do something with the result
 rescue => error
   # Do something in case of error

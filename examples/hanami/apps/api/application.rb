@@ -39,7 +39,7 @@ module Api
         error!('Invalid JSON', 400)
       end
 
-      result, err = router.handle(json_body, { 'headers' => request.env })
+      result, err = router.handle(json_body, { 'httpHeaders' => request.env })
 
       if err
         error!(err.message, err.status || 500)

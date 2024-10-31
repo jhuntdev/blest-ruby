@@ -48,7 +48,7 @@ class MyAPI < Grape::API
       error!('Invalid JSON', 400)
     end
 
-    result, error = router.handle(json_body, { 'headers' => headers })
+    result, error = router.handle(json_body, { 'httpHeaders' => headers })
 
     response_headers = {
       'Content-Type' => 'application/json',

@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |spec|
     spec.name          = "blest"
-    spec.version       = "1.0.0"
+    spec.version       = "1.0.1"
     spec.authors       = ["JHunt"]
     spec.email         = ["hello@jhunt.dev"]
     spec.summary       = %q{The Ruby reference implementation of BLEST}

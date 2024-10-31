@@ -48,7 +48,7 @@ class MyApp < Roda
           next { error: 'Invalid JSON data' }
         end
 
-        result, error = router.handle(json_body, { 'headers' => r.headers })
+        result, error = router.handle(json_body, { 'httpHeaders' => r.httpHeaders })
         
         if error
           response.status = error.status || 500
