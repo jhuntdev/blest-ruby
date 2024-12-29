@@ -5,12 +5,12 @@ require 'blest'
 router = Router.new()
 
 router.route('hello') do |body, context|
-  {
-    'hello': 'world',
-    'bonjour': 'le monde',
-    'hola': 'mundo',
-    'hallo': 'welt'
-  }
+  [
+    { 'hello': 'world' },
+    { 'bonjour': 'le monde' },
+    { 'hola': 'mundo' },
+    { 'hallo': 'welt' }
+  ].sample
 end
 
 router.route('greet') do |body, context|

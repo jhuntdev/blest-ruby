@@ -26,7 +26,7 @@ gem install blest
 
 ### Router
 
-The following example uses Sinatra.
+The following example uses Sinatra, but you can find examples with other frameworks [here](examples).
 
 ```ruby
 require 'sinatra'
@@ -38,14 +38,9 @@ router = Router.new(timeout: 1000)
 
 # Create some middleware (optional)
 router.before do |body, context|
-  if context.dig('headers', 'auth') == 'myToken'?
-    context['user'] = {
-      # user info for example
-    }
-    nil
-  else
-    raise RuntimeError, "Unauthorized"
-  end
+  context['user'] = {
+    # user info for example
+  }
 end
 
 # Create a route controller
@@ -81,7 +76,7 @@ client = HttpClient.new('http://localhost:8080', max_batch_size = 25, buffer_del
 
 # Send a request
 begin
-  result = client.request('greet', { 'name': 'Steve' }, { 'auth': 'myToken' }).value
+  result = client.request('greet', { 'name': 'Steve' }).value
   # Do something with the result
 rescue => error
   # Do something in case of error

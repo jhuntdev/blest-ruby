@@ -542,8 +542,9 @@ def route_reducer(handler, request, context, timeout = nil)
     end
 
     # if request[:selector]
-    #   result = filter_object(result, request[:selector])
-    # end
+    if request&.headers&._s
+      result = filter_object(result, request.headers._s)
+    end
 
     [request[:id], request[:route], result, nil]
   rescue => error

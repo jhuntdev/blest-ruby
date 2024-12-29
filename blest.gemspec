@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |spec|
     spec.name          = "blest"
-    spec.version       = "1.0.1"
+    spec.version       = "1.0.2"
     spec.authors       = ["JHunt"]
     spec.email         = ["hello@jhunt.dev"]
     spec.summary       = %q{The Ruby reference implementation of BLEST}
@@ -12,4 +12,5 @@ Gem::Specification.new do |spec|
   
     spec.files         = Dir["{lib,spec}/**/*", "README.md", "LICENSE"]
     spec.require_paths = ["lib"]
+    spec.required_ruby_version = ">= 3.0"
 end
