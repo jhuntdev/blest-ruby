@@ -54,7 +54,7 @@ end
 post '/' do
   json_body = JSON.parse(request.body.read)
   headers = request.env.select { |k, _| k.start_with?('HTTP_') }
-  result, error = router.handle.call(json_body, { 'headers' => headers })
+  result, error = router.handle.call(json_body, { 'httpHeaders' => headers })
   content_type :json
   if error
     raise Sinatra::Error.new(error.status || 500, error)
